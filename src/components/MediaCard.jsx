@@ -33,9 +33,9 @@ function RatingDot({ score }) {
   )
 }
 
-function MediaCard({ id, title, year, posterUrl, score, mediaType }) {
+function MediaCard({ id, title, year, posterUrl, score }) {
   return (
-    <Link to={`/films/${id}`} className="media-card hover:text-white">
+    <Link to={`/films/${id}`} className="media-card group hover:text-white">
       {posterUrl ? (
         <img src={posterUrl} alt={title} loading="lazy" />
       ) : (

@@ -51,7 +51,7 @@
 
   /* ── Media card (poster 2∶3) ─────────────────────────────────────── */
   .media-card {
-    @apply relative rounded overflow-hidden bg-lb-card cursor-pointer group block;
+    @apply relative rounded overflow-hidden bg-lb-card cursor-pointer block;
     aspect-ratio: 2 / 3;
   }
 
