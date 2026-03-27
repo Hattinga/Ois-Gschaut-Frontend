@@ -1,22 +1,8 @@
 import { Link } from 'react-router-dom'
 import MediaCard from '../components/MediaCard'
 import ListCard from '../components/ListCard'
-
-// Placeholder data until API is connected
-const PLACEHOLDER_FILMS = [
-  { id: 1,  title: 'Oppenheimer',       year: 2023 },
-  { id: 2,  title: 'Past Lives',        year: 2023 },
-  { id: 3,  title: 'Poor Things',       year: 2023 },
-  { id: 4,  title: 'Anatomy of a Fall', year: 2023 },
-  { id: 5,  title: 'The Zone of Interest', year: 2023 },
-  { id: 6,  title: 'Killers of the Flower Moon', year: 2023 },
-]
-
-const PLACEHOLDER_LISTS = [
-  { id: 1, name: 'Best of 2023',        ownerUsername: 'jonashattinger', itemCount: 24 },
-  { id: 2, name: 'Sci-Fi Essentials',   ownerUsername: 'filmfan99',      itemCount: 42 },
-  { id: 3, name: 'Watch with friends',  ownerUsername: 'moviebuff',      itemCount: 12 },
-]
+import { useFetch } from '../hooks'
+import { API_ROUTES } from '../constants'
 
 const FEATURES = [
   {
@@ -49,6 +35,12 @@ const FEATURES = [
 ]
 
 export default function Home() {
+  const { data: mediaData, loading: mediaLoading } = useFetch(API_ROUTES.media)
+  const { data: listsData, loading: listsLoading } = useFetch(API_ROUTES.lists)
+
+  const recentFilms = (mediaData ?? []).slice(0, 6)
+  const recentLists = (listsData ?? []).slice(0, 3)
+
   return (
     <>
       {/* ── Hero ─────────────────────────────────────────────────────── */}
@@ -74,7 +66,7 @@ export default function Home() {
             <span className="text-white font-semibold">Ois Gschaut</span> ist dein Filmtagebuch.
           </p>
           <div className="flex items-center justify-center gap-3">
-            <Link to="/register" className="btn btn-primary btn-lg">
+            <Link to="/films" className="btn btn-primary btn-lg">
               Get started — it&apos;s free
             </Link>
             <Link to="/films" className="btn btn-secondary btn-lg">
@@ -108,11 +100,31 @@ export default function Home() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 md:gap-3">
-          {PLACEHOLDER_FILMS.map(film => (
-            <MediaCard key={film.id} {...film} />
-          ))}
-        </div>
+        {mediaLoading ? (
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 md:gap-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="media-card animate-pulse bg-lb-card" />
+            ))}
+          </div>
+        ) : recentFilms.length > 0 ? (
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2 md:gap-3">
+            {recentFilms.map(film => (
+              <MediaCard
+                key={film.id}
+                id={film.id}
+                title={film.title}
+                year={film.releaseDate ? new Date(film.releaseDate).getFullYear() : undefined}
+                posterUrl={film.assets?.find(a => a.assetType === 'Poster')?.url}
+                score={film.ratings?.[0]?.score}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-10">
+            <p className="text-lb-muted text-sm mb-3">No films yet.</p>
+            <Link to="/films" className="btn btn-accent btn-sm">Discover films →</Link>
+          </div>
+        )}
       </section>
 
       <div className="divider" />
@@ -126,11 +138,30 @@ export default function Home() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          {PLACEHOLDER_LISTS.map(list => (
-            <ListCard key={list.id} {...list} />
-          ))}
-        </div>
+        {listsLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="h-32 bg-lb-card rounded animate-pulse" />
+            ))}
+          </div>
+        ) : recentLists.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {recentLists.map(list => (
+              <ListCard
+                key={list.id}
+                id={list.id}
+                name={list.name}
+                description={list.description}
+                itemCount={list.itemCount ?? 0}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-10">
+            <p className="text-lb-muted text-sm mb-3">No lists yet.</p>
+            <Link to="/lists" className="btn btn-accent btn-sm">Create a list →</Link>
+          </div>
+        )}
       </section>
 
       {/* ── CTA footer banner ────────────────────────────────────────── */}
@@ -140,7 +171,7 @@ export default function Home() {
       >
         <p className="text-lb-muted text-sm mb-3 tracking-widest uppercase">Join the community</p>
         <h2 className="text-3xl font-black text-white mb-6">Start your film diary today.</h2>
-        <Link to="/register" className="btn btn-accent btn-lg">
+        <Link to="/films" className="btn btn-accent btn-lg">
           Create a free account
         </Link>
       </section>

@@ -6,7 +6,7 @@ import { useState, useEffect } from 'react'
  * @param {array} deps - Optional dependency array
  * @returns {object} Object containing data, loading state, and error
  */
-export function useFetch(url, deps) {
+export function useFetch(url) {
     const [state, setState] = useState({
         data: null,
         loading: true,
@@ -42,7 +42,7 @@ export function useFetch(url, deps) {
         return () => {
             isMounted = false
         }
-    }, deps || [url])
+    }, [url])
 
     return state
 }

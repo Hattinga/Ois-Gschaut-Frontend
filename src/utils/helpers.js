@@ -33,7 +33,7 @@ export function roundToDecimals(num, decimals = 2) {
  * Date utilities
  */
 
-export function formatDate(date, format = 'MMM DD, YYYY') {
+export function formatDate(date) {
     return new Intl.DateTimeFormat('en-US', {
         year: 'numeric',
         month: 'short',

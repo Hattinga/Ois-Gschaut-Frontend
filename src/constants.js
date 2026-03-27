@@ -6,14 +6,22 @@ export const IS_DEVELOPMENT = ENVIRONMENT === 'development'
 export const IS_PRODUCTION  = ENVIRONMENT === 'production'
 
 export const API_ROUTES = {
-  users:        '/api/users',
-  lists:        '/api/lists',
-  media:        '/api/media',
-  listItems:    id => `/api/lists/${id}/items`,
-  collaborators: id => `/api/lists/${id}/collaborators`,
-  comments:     id => `/api/lists/${id}/comments`,
-  mediaById:    id => `/api/media/${id}`,
-  episodes:     id => `/api/media/${id}/episodes`,
+  users:         `${API_URL}/api/users`,
+  userById:      id => `${API_URL}/api/users/${id}`,
+  userProfile:   id => `${API_URL}/api/users/${id}/profile`,
+  guestLogin:    `${API_URL}/api/users/guest`,
+  lists:         `${API_URL}/api/lists`,
+  listById:      id => `${API_URL}/api/lists/${id}`,
+  media:         `${API_URL}/api/media`,
+  importMedia:   `${API_URL}/api/media/import`,
+  mediaSearch:   q => `${API_URL}/api/media/search?q=${encodeURIComponent(q)}`,
+  mediaById:     id => `${API_URL}/api/media/${id}`,
+  episodes:      id => `${API_URL}/api/media/${id}/episodes`,
+  syncEpisodes:  id => `${API_URL}/api/media/${id}/sync-episodes`,
+  listItems:     id => `${API_URL}/api/lists/${id}/items`,
+  collaborators: id => `${API_URL}/api/lists/${id}/collaborators`,
+  comments:      id => `${API_URL}/api/lists/${id}/comments`,
+  watched:       `${API_URL}/api/watched`,
 }
 
 export const UI = {

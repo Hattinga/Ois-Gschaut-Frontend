@@ -1,7 +1,7 @@
 /**
  * API Base Configuration
  */
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 
 export const apiConfig = {
     baseURL: API_URL,
@@ -14,15 +14,16 @@ export const apiConfig = {
  * Generic API call function
  */
 export async function apiCall(endpoint, options = {}) {
-    const url = `${API_URL}${endpoint}`
-    const response = await fetch(url, {
-        ...apiConfig,
+    const response = await fetch(endpoint, {
+        headers: apiConfig.headers,
         ...options,
     })
 
     if (!response.ok) {
         throw new Error(`API Error: ${response.statusText}`)
     }
+
+    if (response.status === 204) return null
 
     return response.json()
 }
