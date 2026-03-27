@@ -1,63 +1,50 @@
-/**
- * API Base Configuration
- */
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000'
 
 export const apiConfig = {
-    baseURL: API_URL,
-    headers: {
-        'Content-Type': 'application/json',
-    },
+  baseURL: API_URL,
 }
 
-/**
- * Generic API call function
- */
+function authHeaders() {
+  const token = localStorage.getItem('og_token')
+  return {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  }
+}
+
 export async function apiCall(endpoint, options = {}) {
-    const response = await fetch(endpoint, {
-        headers: apiConfig.headers,
-        ...options,
-    })
+  const response = await fetch(endpoint, {
+    headers: authHeaders(),
+    ...options,
+  })
 
-    if (!response.ok) {
-        throw new Error(`API Error: ${response.statusText}`)
-    }
+  if (!response.ok) {
+    throw new Error(`API Error: ${response.statusText}`)
+  }
 
-    if (response.status === 204) return null
+  if (response.status === 204) return null
 
-    return response.json()
+  return response.json()
 }
 
-/**
- * GET request
- */
 export function apiGet(endpoint) {
-    return apiCall(endpoint, { method: 'GET' })
+  return apiCall(endpoint, { method: 'GET' })
 }
 
-/**
- * POST request
- */
 export function apiPost(endpoint, data) {
-    return apiCall(endpoint, {
-        method: 'POST',
-        body: JSON.stringify(data),
-    })
+  return apiCall(endpoint, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
 }
 
-/**
- * PUT request
- */
 export function apiPut(endpoint, data) {
-    return apiCall(endpoint, {
-        method: 'PUT',
-        body: JSON.stringify(data),
-    })
+  return apiCall(endpoint, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  })
 }
 
-/**
- * DELETE request
- */
 export function apiDelete(endpoint) {
-    return apiCall(endpoint, { method: 'DELETE' })
+  return apiCall(endpoint, { method: 'DELETE' })
 }

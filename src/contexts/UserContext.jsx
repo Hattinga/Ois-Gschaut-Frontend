@@ -12,18 +12,25 @@ export function UserProvider({ children }) {
     }
   })
 
-  const login = (user) => {
+  const login = (user, token) => {
     setCurrentUser(user)
     localStorage.setItem('og_user', JSON.stringify(user))
+    if (token) localStorage.setItem('og_token', token)
   }
 
   const logout = () => {
     setCurrentUser(null)
     localStorage.removeItem('og_user')
+    localStorage.removeItem('og_token')
+  }
+
+  const updateUser = (user) => {
+    setCurrentUser(user)
+    localStorage.setItem('og_user', JSON.stringify(user))
   }
 
   return (
-    <UserContext.Provider value={{ currentUser, login, logout }}>
+    <UserContext.Provider value={{ currentUser, login, logout, updateUser }}>
       {children}
     </UserContext.Provider>
   )

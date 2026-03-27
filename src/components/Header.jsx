@@ -16,8 +16,8 @@ function GuestLoginModal({ onClose }) {
     setLoading(true)
     setError(null)
     try {
-      const user = await apiPost(API_ROUTES.guestLogin, { username: username.trim() })
-      login(user)
+      const { user, token } = await apiPost(API_ROUTES.authGuest, { username: username.trim() })
+      login(user, token)
       onClose()
     } catch {
       setError('Could not connect to server. Is the backend running?')
@@ -58,6 +58,27 @@ function GuestLoginModal({ onClose }) {
             </button>
           </div>
         </form>
+
+        <div className="mt-5 pt-4 border-t border-lb-border">
+          <p className="text-xs text-lb-muted text-center mb-3">Or sign in with</p>
+          <div className="flex gap-2">
+            <button
+              disabled
+              title="Coming soon"
+              className="btn btn-secondary btn-md flex-1 opacity-40 cursor-not-allowed"
+            >
+              Google
+            </button>
+            <button
+              disabled
+              title="Coming soon"
+              className="btn btn-secondary btn-md flex-1 opacity-40 cursor-not-allowed"
+            >
+              GitHub
+            </button>
+          </div>
+          <p className="text-xs text-lb-muted text-center mt-2">OAuth coming soon</p>
+        </div>
       </div>
     </div>
   )
@@ -98,6 +119,9 @@ function Header() {
               <>
                 <Link to={`/users/${currentUser.id}`} className="text-white font-semibold text-sm hover:text-lb-accent transition-colors">
                   {currentUser.username}
+                </Link>
+                <Link to="/settings" className="nav-link text-xs">
+                  Settings
                 </Link>
                 <button onClick={logout} className="nav-link text-xs">
                   Sign out
