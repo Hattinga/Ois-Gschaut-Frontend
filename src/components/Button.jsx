@@ -1,46 +1,44 @@
 function Button({
-    variant = 'primary',
-    size = 'medium',
-    isLoading = false,
-    disabled = false,
-    children,
-    className = '',
-    ...props
+  variant = 'primary',
+  size = 'md',
+  isLoading = false,
+  disabled = false,
+  children,
+  className = '',
+  ...props
 }) {
-    const sizeClasses = {
-        small: 'px-2 py-1 text-sm',
-        medium: 'px-4 py-2',
-        large: 'px-6 py-3 text-lg',
-    }
+  const variantClass = {
+    primary:   'btn-primary',
+    secondary: 'btn-secondary',
+    ghost:     'btn-ghost',
+    accent:    'btn-accent',
+    danger:    'btn bg-red-600 text-white hover:bg-red-500',
+  }[variant] ?? 'btn-primary'
 
-    const variantClasses = {
-        primary: 'bg-indigo-600 text-white hover:bg-indigo-700',
-        secondary: 'bg-emerald-600 text-white hover:bg-emerald-700',
-        danger: 'bg-red-600 text-white hover:bg-red-700',
-    }
+  const sizeClass = {
+    sm:  'btn-sm',
+    md:  'btn-md',
+    lg:  'btn-lg',
+    // legacy aliases
+    small:  'btn-sm',
+    medium: 'btn-md',
+    large:  'btn-lg',
+  }[size] ?? 'btn-md'
 
-    const baseClasses = 'rounded font-medium transition-all duration-200 cursor-pointer border-none shadow-md'
-    const disabledClasses = (disabled || isLoading) ? 'opacity-50 cursor-not-allowed' : ''
-
-    const classes = [
-        baseClasses,
-        sizeClasses[size],
-        variantClasses[variant],
-        disabledClasses,
-        className,
-    ]
-        .filter(Boolean)
-        .join(' ')
-
-    return (
-        <button
-            className={classes}
-            disabled={disabled || isLoading}
-            {...props}
-        >
-            {isLoading ? 'Loading...' : children}
-        </button>
-    )
+  return (
+    <button
+      className={`${variantClass} ${sizeClass} ${className}`}
+      disabled={disabled || isLoading}
+      {...props}
+    >
+      {isLoading ? (
+        <span className="flex items-center gap-2">
+          <span className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
+          Loading…
+        </span>
+      ) : children}
+    </button>
+  )
 }
 
 export default Button

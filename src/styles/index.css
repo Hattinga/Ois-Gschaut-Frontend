@@ -2,37 +2,85 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  body {
+    @apply bg-lb-bg text-lb-text antialiased;
+    font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply text-white font-semibold leading-tight;
+  }
+
+  a {
+    @apply text-lb-accent no-underline transition-colors duration-150;
+  }
+
+  a:hover {
+    @apply text-white;
+  }
+}
+
 @layer components {
-    .btn {
-        @apply px-4 py-2 rounded font-medium transition-all duration-200 cursor-pointer border-none;
-    }
+  /* ── Buttons ─────────────────────────────────────────────────────── */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 font-semibold rounded
+           transition-all duration-150 cursor-pointer select-none whitespace-nowrap border-none;
+  }
+  .btn:disabled {
+    @apply opacity-40 cursor-not-allowed;
+  }
+  .btn-sm  { @apply px-3 py-1.5 text-xs; }
+  .btn-md  { @apply px-4 py-2 text-sm; }
+  .btn-lg  { @apply px-6 py-3 text-base; }
 
-    .btn-primary {
-        @apply bg-indigo-600 text-white hover:bg-indigo-700 shadow-md;
-    }
+  .btn-primary   { @apply btn bg-lb-green text-lb-bg hover:brightness-110; }
+  .btn-secondary { @apply btn border border-lb-border text-lb-muted hover:border-lb-accent hover:text-white; }
+  .btn-ghost     { @apply btn text-lb-muted hover:text-white; }
+  .btn-accent    { @apply btn bg-lb-accent text-lb-bg hover:brightness-110; }
 
-    .btn-secondary {
-        @apply bg-emerald-600 text-white hover:bg-emerald-700 shadow-md;
-    }
+  /* ── Navigation ──────────────────────────────────────────────────── */
+  .nav-link {
+    @apply text-xs font-bold tracking-widest uppercase text-lb-muted
+           hover:text-white transition-colors duration-150;
+  }
 
-    .btn-danger {
-        @apply bg-red-600 text-white hover:bg-red-700 shadow-md;
-    }
+  /* ── Media card (poster 2∶3) ─────────────────────────────────────── */
+  .media-card {
+    @apply relative rounded overflow-hidden bg-lb-card cursor-pointer group block;
+    aspect-ratio: 2 / 3;
+  }
 
-    .btn-small {
-        @apply px-2 py-1 text-sm;
-    }
+  .media-card img {
+    @apply w-full h-full object-cover transition-transform duration-300 group-hover:scale-105;
+  }
 
-    .btn-medium {
-        @apply px-4 py-2;
-    }
+  .media-card-overlay {
+    @apply absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200
+           bg-gradient-to-t from-black/90 via-black/40 to-transparent
+           flex flex-col justify-end p-2;
+  }
 
-    .btn-large {
-        @apply px-6 py-3 text-lg;
-    }
+  /* ── Page layout ─────────────────────────────────────────────────── */
+  .section-label {
+    @apply text-xs font-bold tracking-widest uppercase text-lb-muted mb-3;
+  }
 
-    .btn:disabled,
-    .btn-loading {
-        @apply opacity-50 cursor-not-allowed;
-    }
+  .page-container {
+    @apply max-w-6xl mx-auto px-4;
+  }
+
+  .divider {
+    @apply border-t border-lb-border my-8;
+  }
+
+  /* ── Input ───────────────────────────────────────────────────────── */
+  .input {
+    @apply bg-lb-card border border-lb-border text-white rounded px-3 py-2 text-sm
+           placeholder-lb-muted focus:outline-none focus:border-lb-accent transition-colors;
+  }
 }
