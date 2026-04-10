@@ -8,6 +8,7 @@ import Lists from './pages/Lists'
 import ListDetail from './pages/ListDetail'
 import Profile from './pages/Profile'
 import AccountSettings from './pages/AccountSettings'
+import AuthCallback from './pages/AuthCallback'
 import NotFound from './pages/NotFound'
 
 function App() {
@@ -22,8 +23,9 @@ function App() {
             <Route path="/lists"     element={<Lists />} />
             <Route path="/lists/:id"  element={<ListDetail />} />
             <Route path="/users/:id" element={<Profile />} />
-            <Route path="/settings"  element={<AccountSettings />} />
-            <Route path="*"          element={<NotFound />} />
+            <Route path="/settings"      element={<AccountSettings />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
+            <Route path="*"              element={<NotFound />} />
           </Routes>
         </Layout>
       </Router>

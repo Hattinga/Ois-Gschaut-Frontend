@@ -62,22 +62,19 @@ function GuestLoginModal({ onClose }) {
         <div className="mt-5 pt-4 border-t border-lb-border">
           <p className="text-xs text-lb-muted text-center mb-3">Or sign in with</p>
           <div className="flex gap-2">
-            <button
-              disabled
-              title="Coming soon"
-              className="btn btn-secondary btn-md flex-1 opacity-40 cursor-not-allowed"
+            <a
+              href={API_ROUTES.authGoogle}
+              className="btn btn-secondary btn-md flex-1 text-center"
             >
               Google
-            </button>
-            <button
-              disabled
-              title="Coming soon"
-              className="btn btn-secondary btn-md flex-1 opacity-40 cursor-not-allowed"
+            </a>
+            <a
+              href={API_ROUTES.authGitHub}
+              className="btn btn-secondary btn-md flex-1 text-center"
             >
               GitHub
-            </button>
+            </a>
           </div>
-          <p className="text-xs text-lb-muted text-center mt-2">OAuth coming soon</p>
         </div>
       </div>
     </div>
