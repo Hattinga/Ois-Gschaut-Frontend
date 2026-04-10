@@ -244,10 +244,10 @@ export default function FilmDetail() {
     if (!currentUser) return
     const isWatched = watchedSeasons?.includes(season)
     if (isWatched) {
-      await apiDelete(`${API_ROUTES.watched}?userId=${currentUser.id}&mediaId=${id}&season=${season}`)
+      await apiDelete(`${API_ROUTES.watched}?mediaId=${id}&season=${season}`)
       setWatchedSeasons(prev => prev.filter(s => s !== season))
     } else {
-      await apiPost(API_ROUTES.watched, { userId: currentUser.id, mediaId: Number(id), season })
+      await apiPost(API_ROUTES.watched, { mediaId: Number(id), season })
       setWatchedSeasons(prev => [...(prev ?? []), season])
     }
   }

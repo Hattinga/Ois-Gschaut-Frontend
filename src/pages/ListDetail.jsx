@@ -222,7 +222,6 @@ export default function ListDetail() {
     setPosting(true)
     try {
       const newComment = await apiPost(API_ROUTES.comments(id), {
-        userId: currentUser.id,
         content: comment.trim(),
       })
       setLocalComments([...(fetchedComments ?? []), newComment])

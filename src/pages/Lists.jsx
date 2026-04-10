@@ -20,7 +20,6 @@ function CreateListModal({ onClose, onCreated }) {
     setError(null)
     try {
       const list = await apiPost(API_ROUTES.lists, {
-        userId: currentUser.id,
         name: name.trim(),
         description: desc.trim() || null,
         isPublic,
