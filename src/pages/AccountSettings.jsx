@@ -89,21 +89,18 @@ export default function AccountSettings() {
         </form>
       </section>
 
-      {/* OAuth — coming soon */}
+      {/* Connected account */}
       <section className="bg-lb-surface border border-lb-border rounded-lg p-6 mb-6">
-        <h2 className="text-base font-bold text-white mb-1">Connected accounts</h2>
-        <p className="text-xs text-lb-muted mb-4">
-          Link your account to sign in with Google or GitHub.
-        </p>
-        <div className="flex gap-3">
-          <button disabled className="btn btn-secondary btn-md flex-1 opacity-40 cursor-not-allowed">
-            Connect Google
-          </button>
-          <button disabled className="btn btn-secondary btn-md flex-1 opacity-40 cursor-not-allowed">
-            Connect GitHub
-          </button>
-        </div>
-        <p className="text-xs text-lb-muted mt-2">OAuth integration coming soon.</p>
+        <h2 className="text-base font-bold text-white mb-1">Connected account</h2>
+        {currentUser.oauthProvider ? (
+          <div className="flex items-center gap-2 mt-3">
+            <span className="text-lb-green text-sm">✓</span>
+            <span className="text-sm text-lb-text capitalize">{currentUser.oauthProvider}</span>
+            <span className="text-xs text-lb-muted">— signed in via OAuth</span>
+          </div>
+        ) : (
+          <p className="text-xs text-lb-muted mt-2">No OAuth provider linked to this account.</p>
+        )}
       </section>
 
       {/* Danger zone */}

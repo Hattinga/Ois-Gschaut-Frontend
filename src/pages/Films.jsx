@@ -44,19 +44,41 @@ function TmdbResultRow({ result, isImported, isImporting, onImport }) {
 export default function Films() {
   const [query, setQuery]           = useState('')
   const [typeFilter, setTypeFilter] = useState('All')
-  const [tmdbResults, setTmdbResults] = useState([])
-  const [searching, setSearching]   = useState(false)
-  const [imported, setImported]     = useState(new Set())
-  const [importing, setImporting]   = useState(null)
-  const [library, setLibrary]       = useState([])
-  const [libraryLoading, setLibraryLoading] = useState(true)
-  const [libraryError, setLibraryError]     = useState(null)
 
+  // TMDB search results (when query is non-empty)
+  const [tmdbResults, setTmdbResults] = useState([])
+  const [searching, setSearching]     = useState(false)
+
+  // Trending (shown when query is empty)
+  const [trending, setTrending]           = useState([])
+  const [trendingLoading, setTrendingLoading] = useState(true)
+
+  // Local library
+  const [library, setLibrary]             = useState([])
+  const [libraryLoading, setLibraryLoading] = useState(true)
+  const [libraryError, setLibraryError]   = useState(null)
+
+  // Track imported items: seed with tmdbIds already in library
+  const [imported, setImported] = useState(new Set())
+  const [importing, setImporting] = useState(null)
+
+  // Fetch library + trending on mount
   useEffect(() => {
     fetch(API_ROUTES.media)
       .then(r => r.json())
-      .then(data => { setLibrary(Array.isArray(data) ? data : []); setLibraryLoading(false) })
+      .then(data => {
+        const items = Array.isArray(data) ? data : []
+        setLibrary(items)
+        setLibraryLoading(false)
+        // Pre-mark items already in library as imported
+        setImported(new Set(items.map(f => f.tmdbId).filter(Boolean)))
+      })
       .catch(err => { setLibraryError(err); setLibraryLoading(false) })
+
+    fetch(API_ROUTES.mediaTrending)
+      .then(r => r.json())
+      .then(data => { setTrending(Array.isArray(data) ? data : []); setTrendingLoading(false) })
+      .catch(() => setTrendingLoading(false))
   }, [])
 
   // Debounced TMDB search
@@ -95,9 +117,18 @@ export default function Films() {
     }
   }
 
-  const filteredLibrary = library.filter(f =>
-    typeFilter === 'All' || f.mediaType === typeFilter
-  )
+  const applyTypeFilter = (items) =>
+    typeFilter === 'All' ? items : items.filter(r => r.mediaType === typeFilter)
+
+  const filteredLibrary  = library.filter(f => {
+    const matchesType = typeFilter === 'All' || f.mediaType === typeFilter
+    const matchesText = !query.trim() || f.title.toLowerCase().includes(query.toLowerCase())
+    return matchesType && matchesText
+  })
+  const filteredTrending = applyTypeFilter(trending)
+  const filteredSearch   = applyTypeFilter(tmdbResults)
+
+  const isSearching = query.trim().length > 0
 
   return (
     <div className="page-container py-8">
@@ -109,7 +140,7 @@ export default function Films() {
         <div className="flex-1 sm:max-w-xs sm:ml-auto">
           <input
             className="input w-full"
-            placeholder="Search TMDB to discover…"
+            placeholder="Search TMDB…"
             value={query}
             onChange={e => setQuery(e.target.value)}
           />
@@ -128,41 +159,67 @@ export default function Films() {
         </div>
       </div>
 
-      {/* TMDB search results */}
-      {query.trim() && (
-        <div className="mb-10">
-          <p className="section-label mb-4">
-            {searching ? 'Searching…' : `Results for "${query}"`}
-          </p>
-
-          {searching ? (
-            <div className="space-y-2">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="h-14 bg-lb-card rounded animate-pulse" />
-              ))}
-            </div>
-          ) : tmdbResults.length > 0 ? (
-            <div className="space-y-2">
-              {tmdbResults.map(r => (
-                <TmdbResultRow
-                  key={r.tmdbId}
-                  result={r}
-                  isImported={imported.has(r.tmdbId)}
-                  isImporting={importing === r.tmdbId}
-                  onImport={() => handleImport(r.tmdbId, r.mediaType)}
-                />
-              ))}
-            </div>
-          ) : (
-            <p className="text-lb-muted text-sm">No results found on TMDB.</p>
-          )}
-        </div>
-      )}
+      {/* Search results OR Trending */}
+      <div className="mb-10">
+        {isSearching ? (
+          <>
+            <p className="section-label mb-4">
+              {searching ? 'Searching…' : `Results for "${query}"`}
+            </p>
+            {searching ? (
+              <div className="space-y-2">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="h-14 bg-lb-card rounded animate-pulse" />
+                ))}
+              </div>
+            ) : filteredSearch.length > 0 ? (
+              <div className="space-y-2">
+                {filteredSearch.map(r => (
+                  <TmdbResultRow
+                    key={r.tmdbId}
+                    result={r}
+                    isImported={imported.has(r.tmdbId)}
+                    isImporting={importing === r.tmdbId}
+                    onImport={() => handleImport(r.tmdbId, r.mediaType)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <p className="text-lb-muted text-sm">No results found on TMDB.</p>
+            )}
+          </>
+        ) : (
+          <>
+            <p className="section-label mb-4">Trending this week</p>
+            {trendingLoading ? (
+              <div className="space-y-2">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="h-14 bg-lb-card rounded animate-pulse" />
+                ))}
+              </div>
+            ) : filteredTrending.length > 0 ? (
+              <div className="space-y-2">
+                {filteredTrending.map(r => (
+                  <TmdbResultRow
+                    key={r.tmdbId}
+                    result={r}
+                    isImported={imported.has(r.tmdbId)}
+                    isImporting={importing === r.tmdbId}
+                    onImport={() => handleImport(r.tmdbId, r.mediaType)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <p className="text-lb-muted text-sm">Could not load trending — is the backend running?</p>
+            )}
+          </>
+        )}
+      </div>
 
       {/* Library */}
       <div>
         <p className="section-label mb-4">
-          Library
+          Your library
           {!libraryLoading && (
             <span className="ml-2 text-lb-muted font-normal text-xs normal-case">
               {filteredLibrary.length} title{filteredLibrary.length !== 1 ? 's' : ''}
@@ -196,11 +253,11 @@ export default function Films() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-20">
+          <div className="text-center py-16 border border-lb-border/30 rounded">
             <p className="text-lb-muted text-sm">
               {typeFilter !== 'All'
-                ? `No ${typeFilter}s in library yet.`
-                : 'Library is empty — search TMDB above to discover and import films.'}
+                ? `No ${typeFilter}s in your library yet.`
+                : 'Your library is empty — add something from the trending list above.'}
             </p>
           </div>
         )}

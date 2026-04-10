@@ -1,16 +1,16 @@
 import { Link } from 'react-router-dom'
 
-function PosterStrip({ items = [] }) {
-  const filled = [...items, null, null, null, null].slice(0, 4)
+function PosterStrip({ urls = [] }) {
+  const filled = [...urls, null, null, null, null].slice(0, 4)
   return (
     <div className="grid grid-cols-4 gap-0.5 rounded overflow-hidden" style={{ aspectRatio: '4/1.5' }}>
-      {filled.map((item, i) => (
+      {filled.map((url, i) => (
         <div
           key={i}
           className="bg-lb-card"
           style={
-            item?.posterUrl
-              ? { backgroundImage: `url(${item.posterUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+            url
+              ? { backgroundImage: `url(${url})`, backgroundSize: 'cover', backgroundPosition: 'center' }
               : { background: `linear-gradient(135deg, hsl(${i * 55},25%,15%), hsl(${i * 55 + 30},20%,10%))` }
           }
         />
@@ -19,13 +19,13 @@ function PosterStrip({ items = [] }) {
   )
 }
 
-function ListCard({ id, name, description, ownerUsername, itemCount = 0, previewItems = [] }) {
+function ListCard({ id, name, description, ownerUsername, itemCount = 0, coverPosters = [] }) {
   return (
     <Link
       to={`/lists/${id}`}
       className="block bg-lb-card rounded overflow-hidden hover:bg-lb-surface transition-colors group"
     >
-      <PosterStrip items={previewItems} />
+      <PosterStrip urls={coverPosters} />
 
       <div className="p-3">
         <h3 className="text-sm font-semibold text-white group-hover:text-lb-accent transition-colors line-clamp-1">

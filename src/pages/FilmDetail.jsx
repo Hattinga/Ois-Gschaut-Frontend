@@ -4,6 +4,7 @@ import { useFetch } from '../hooks'
 import { API_ROUTES } from '../constants'
 import { apiPost, apiDelete } from '../utils/api'
 import { useCurrentUser } from '../contexts/UserContext'
+import { useToast } from '../contexts/ToastContext'
 
 // ── Rating badge ──────────────────────────────────────────────────────────────
 function RatingBadge({ source, score }) {
@@ -37,19 +38,17 @@ function PosterPlaceholder({ title }) {
 }
 
 // ── Add to list modal ─────────────────────────────────────────────────────────
-function AddToListModal({ mediaId, onClose }) {
-  const { currentUser } = useCurrentUser()
-  const { data: allLists } = useFetch(API_ROUTES.lists)
+function AddToListModal({ mediaId, onClose, onAdded }) {
+  const { data: allLists } = useFetch(API_ROUTES.myLists)
   const [adding, setAdding]   = useState(null)
   const [added, setAdded]     = useState(new Set())
 
-  const myLists = (allLists ?? []).filter(l => l.userId === currentUser?.id)
-
-  const handleAdd = async (listId) => {
+  const handleAdd = async (listId, listName) => {
     setAdding(listId)
     try {
       await apiPost(API_ROUTES.listItems(listId), { mediaId })
       setAdded(prev => new Set([...prev, listId]))
+      onAdded(listName)
     } catch {
       // 409 = already in list — treat as success
       setAdded(prev => new Set([...prev, listId]))
@@ -69,21 +68,25 @@ function AddToListModal({ mediaId, onClose }) {
           <button onClick={onClose} className="text-lb-muted hover:text-white text-xl leading-none">×</button>
         </div>
 
-        {myLists.length === 0 ? (
+        {!allLists ? (
+          <div className="space-y-2 animate-pulse">
+            {[1, 2, 3].map(i => <div key={i} className="h-12 bg-lb-card rounded" />)}
+          </div>
+        ) : allLists.length === 0 ? (
           <div className="text-center py-6">
             <p className="text-lb-muted text-sm mb-4">You have no lists yet.</p>
             <Link to="/lists" onClick={onClose} className="btn btn-primary btn-sm">Create a list</Link>
           </div>
         ) : (
           <div className="space-y-2">
-            {myLists.map(list => (
+            {allLists.map(list => (
               <div key={list.id} className="flex items-center justify-between gap-3 p-2 rounded bg-lb-card">
                 <div className="min-w-0">
                   <p className="text-sm text-white truncate">{list.name}</p>
                   <p className="text-xs text-lb-muted">{list.itemCount} film{list.itemCount !== 1 ? 's' : ''}</p>
                 </div>
                 <button
-                  onClick={() => handleAdd(list.id)}
+                  onClick={() => handleAdd(list.id, list.name)}
                   disabled={added.has(list.id) || adding === list.id}
                   className={`btn btn-sm shrink-0 ${added.has(list.id) ? 'btn-secondary opacity-60' : 'btn-accent'}`}
                 >
@@ -103,9 +106,8 @@ function EpisodesSection({ mediaId, watchedSeasons, onToggleWatched }) {
   const [activeSeason, setActiveSeason] = useState(1)
   const [syncing, setSyncing]           = useState(false)
   const [syncError, setSyncError]       = useState(null)
-  const [episodes, setEpisodes]         = useState(null) // null = not loaded yet
+  const [episodes, setEpisodes]         = useState(null)
 
-  // Fetch episodes once
   useEffect(() => {
     fetch(API_ROUTES.episodes(mediaId))
       .then(r => r.json())
@@ -113,7 +115,6 @@ function EpisodesSection({ mediaId, watchedSeasons, onToggleWatched }) {
       .catch(() => setEpisodes([]))
   }, [mediaId])
 
-  // Auto-sync when loaded and empty
   useEffect(() => {
     if (episodes !== null && episodes.length === 0 && !syncing) {
       handleSync()
@@ -129,7 +130,6 @@ function EpisodesSection({ mediaId, watchedSeasons, onToggleWatched }) {
         const text = await resp.text()
         setSyncError(text || 'Sync failed — TVMaze may not have this show.')
       } else {
-        // Reload episodes after sync
         const updated = await fetch(API_ROUTES.episodes(mediaId)).then(r => r.json())
         setEpisodes(Array.isArray(updated) ? updated : [])
       }
@@ -142,7 +142,6 @@ function EpisodesSection({ mediaId, watchedSeasons, onToggleWatched }) {
 
   const seasons = episodes ? [...new Set(episodes.map(e => e.season))].sort((a, b) => a - b) : []
 
-  // Set active season to first available when data loads
   useEffect(() => {
     if (seasons.length > 0 && !seasons.includes(activeSeason)) {
       setActiveSeason(seasons[0])
@@ -226,12 +225,15 @@ function EpisodesSection({ mediaId, watchedSeasons, onToggleWatched }) {
 export default function FilmDetail() {
   const { id }          = useParams()
   const { currentUser } = useCurrentUser()
-  const [showAddToList, setShowAddToList] = useState(false)
-  const [watchedSeasons, setWatchedSeasons] = useState(null) // null = not loaded
+  const { showToast }   = useToast()
+  const [showAddToList, setShowAddToList]   = useState(false)
+  const [watchedSeasons, setWatchedSeasons] = useState(null)
+  const [savedToWatchlist, setSavedToWatchlist] = useState(false)
+  const [watchlistLoading, setWatchlistLoading] = useState(false)
 
   const { data: film, loading, error } = useFetch(API_ROUTES.mediaById(id))
 
-  // Load watched status for current user + this media
+  // Load watched status
   useEffect(() => {
     if (!currentUser || !id) return
     fetch(`${API_ROUTES.watched}?userId=${currentUser.id}&mediaId=${id}`)
@@ -240,15 +242,42 @@ export default function FilmDetail() {
       .catch(() => setWatchedSeasons([]))
   }, [currentUser, id])
 
+  // Load watchlist status
+  useEffect(() => {
+    if (!currentUser || !id) return
+    fetch(API_ROUTES.watchlist, {
+      headers: { Authorization: `Bearer ${localStorage.getItem('og_token')}` },
+    })
+      .then(r => r.json())
+      .then(ids => setSavedToWatchlist((ids ?? []).includes(Number(id))))
+      .catch(() => {})
+  }, [currentUser, id])
+
   const handleToggleWatched = async (season) => {
     if (!currentUser) return
     const isWatched = watchedSeasons?.includes(season)
     if (isWatched) {
       await apiDelete(`${API_ROUTES.watched}?mediaId=${id}&season=${season}`)
       setWatchedSeasons(prev => prev.filter(s => s !== season))
+      showToast('Removed from watched')
     } else {
       await apiPost(API_ROUTES.watched, { mediaId: Number(id), season })
       setWatchedSeasons(prev => [...(prev ?? []), season])
+      showToast('Marked as watched')
+    }
+  }
+
+  const handleToggleWatchlist = async () => {
+    if (!currentUser || watchlistLoading) return
+    setWatchlistLoading(true)
+    try {
+      const result = await apiPost(API_ROUTES.watchlistToggle, { mediaId: Number(id) })
+      setSavedToWatchlist(result.saved)
+      showToast(result.saved ? 'Saved to Watchlist' : 'Removed from Watchlist')
+    } catch {
+      showToast('Something went wrong', 'error')
+    } finally {
+      setWatchlistLoading(false)
     }
   }
 
@@ -347,6 +376,14 @@ export default function FilmDetail() {
                     {isWatchedMovie ? '✓ Watched' : 'Mark watched'}
                   </button>
                 )}
+                <button
+                  onClick={handleToggleWatchlist}
+                  disabled={watchlistLoading}
+                  className={`btn btn-md ${savedToWatchlist ? 'btn-accent' : 'btn-secondary'}`}
+                  title={savedToWatchlist ? 'Remove from Watchlist' : 'Save to Watchlist'}
+                >
+                  {savedToWatchlist ? '🔖 Saved' : '🔖 Save'}
+                </button>
               </div>
             ) : (
               <p className="text-lb-muted text-sm mt-6">
@@ -372,6 +409,10 @@ export default function FilmDetail() {
         <AddToListModal
           mediaId={Number(id)}
           onClose={() => setShowAddToList(false)}
+          onAdded={(listName) => {
+            showToast(`Added to "${listName}"`)
+            setShowAddToList(false)
+          }}
         />
       )}
     </div>

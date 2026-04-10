@@ -153,6 +153,7 @@ export default function Home() {
                 name={list.name}
                 description={list.description}
                 itemCount={list.itemCount ?? 0}
+                coverPosters={list.coverPosters ?? []}
               />
             ))}
           </div>

@@ -5,6 +5,7 @@ import { useFetch } from '../hooks'
 import { API_ROUTES, UI } from '../constants'
 import { apiPost, apiPut, apiDelete } from '../utils/api'
 import { useCurrentUser } from '../contexts/UserContext'
+import { useToast } from '../contexts/ToastContext'
 
 // ── Add Film Modal ────────────────────────────────────────────────────────────
 function AddFilmModal({ listId, onClose, onAdded }) {
@@ -189,6 +190,7 @@ function EditListModal({ list, onClose, onSaved }) {
 export default function ListDetail() {
   const { id }          = useParams()
   const { currentUser } = useCurrentUser()
+  const { showToast }   = useToast()
   const navigate        = useNavigate()
 
   const [showAddFilm, setShowAddFilm]   = useState(false)
@@ -226,6 +228,7 @@ export default function ListDetail() {
       })
       setLocalComments([...(fetchedComments ?? []), newComment])
       setComment('')
+      showToast('Comment posted')
     } finally {
       setPosting(false)
     }
@@ -236,13 +239,16 @@ export default function ListDetail() {
     try {
       await apiDelete(`${API_ROUTES.listItems(id)}/${mediaId}`)
       setItemsVersion(v => v + 1)
+      showToast('Film removed from list')
     } catch {
-      setLocalItems(null) // revert to server state on error
+      setLocalItems(null)
+      showToast('Failed to remove film', 'error')
     }
   }
 
   const handleSaved = (updated) => {
     setLocalList(updated)
+    showToast('List updated')
   }
 
   const handleDelete = async () => {

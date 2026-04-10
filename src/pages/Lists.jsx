@@ -4,6 +4,7 @@ import { useFetch } from '../hooks'
 import { API_ROUTES } from '../constants'
 import { apiPost } from '../utils/api'
 import { useCurrentUser } from '../contexts/UserContext'
+import { useToast } from '../contexts/ToastContext'
 
 function CreateListModal({ onClose, onCreated }) {
   const { currentUser } = useCurrentUser()
@@ -92,6 +93,7 @@ function CreateListModal({ onClose, onCreated }) {
 
 export default function Lists() {
   const { currentUser } = useCurrentUser()
+  const { showToast }   = useToast()
   const [search, setSearch]         = useState('')
   const [showCreate, setShowCreate] = useState(false)
   const [localLists, setLocalLists] = useState(null)
@@ -111,6 +113,7 @@ export default function Lists() {
 
   const handleCreated = (newList) => {
     setLocalLists(prev => [...(prev ?? data ?? []), newList])
+    showToast(`List "${newList.name}" created`)
   }
 
   return (
@@ -171,6 +174,7 @@ export default function Lists() {
               name={list.name}
               description={list.description}
               itemCount={list.itemCount}
+              coverPosters={list.coverPosters ?? []}
             />
           ))}
         </div>

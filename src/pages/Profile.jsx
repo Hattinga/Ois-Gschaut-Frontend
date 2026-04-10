@@ -124,6 +124,7 @@ export default function Profile() {
                 name={list.name}
                 description={list.description}
                 itemCount={list.itemCount}
+                coverPosters={list.coverPosters ?? []}
               />
             ))}
           </div>
