@@ -7,17 +7,7 @@ function Footer() {
         <p className="text-lb-muted text-xs">
           &copy; {year} Ois Gschaut
         </p>
-        <nav className="flex gap-6">
-          {['About', 'Contact', 'Privacy', 'Terms'].map(label => (
-            <a
-              key={label}
-              href="#"
-              className="text-xs text-lb-muted hover:text-white transition-colors"
-            >
-              {label}
-            </a>
-          ))}
-        </nav>
+        <span className="text-lb-muted text-xs">A 4th class DBI school project</span>
       </div>
     </footer>
   )

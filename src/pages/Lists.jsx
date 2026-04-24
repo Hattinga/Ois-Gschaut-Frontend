@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react'
 import ListCard from '../components/ListCard'
+import Pagination from '../components/Pagination'
 import { useFetch } from '../hooks'
-import { API_ROUTES } from '../constants'
+import { API_ROUTES, UI } from '../constants'
 import { apiPost } from '../utils/api'
 import { useCurrentUser } from '../contexts/UserContext'
 import { useToast } from '../contexts/ToastContext'
 
 function CreateListModal({ onClose, onCreated }) {
-  const { currentUser } = useCurrentUser()
   const [name, setName]         = useState('')
   const [desc, setDesc]         = useState('')
   const [isPublic, setIsPublic] = useState(false)
@@ -95,6 +95,7 @@ export default function Lists() {
   const { currentUser } = useCurrentUser()
   const { showToast }   = useToast()
   const [search, setSearch]         = useState('')
+  const [page, setPage]             = useState(1)
   const [showCreate, setShowCreate] = useState(false)
   const [localLists, setLocalLists] = useState(null)
 
@@ -110,6 +111,7 @@ export default function Lists() {
   const filtered = lists.filter(l =>
     l.name.toLowerCase().includes(search.toLowerCase())
   )
+  const paged = filtered.slice((page - 1) * UI.itemsPerPage, page * UI.itemsPerPage)
 
   const handleCreated = (newList) => {
     setLocalLists(prev => [...(prev ?? data ?? []), newList])
@@ -132,7 +134,7 @@ export default function Lists() {
             className="input w-full"
             placeholder="Search lists…"
             value={search}
-            onChange={e => setSearch(e.target.value)}
+            onChange={e => { setSearch(e.target.value); setPage(1) }}
           />
         </div>
 
@@ -166,18 +168,21 @@ export default function Lists() {
       )}
 
       {!loading && filtered.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          {filtered.map(list => (
-            <ListCard
-              key={list.id}
-              id={list.id}
-              name={list.name}
-              description={list.description}
-              itemCount={list.itemCount}
-              coverPosters={list.coverPosters ?? []}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {paged.map(list => (
+              <ListCard
+                key={list.id}
+                id={list.id}
+                name={list.name}
+                description={list.description}
+                itemCount={list.itemCount}
+                coverPosters={list.coverPosters ?? []}
+              />
+            ))}
+          </div>
+          <Pagination total={filtered.length} page={page} onPageChange={setPage} />
+        </>
       )}
 
       {!loading && !error && filtered.length === 0 && (

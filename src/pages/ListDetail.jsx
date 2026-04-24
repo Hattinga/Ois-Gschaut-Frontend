@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom'
 import MediaCard from '../components/MediaCard'
 import { useFetch } from '../hooks'
 import { API_ROUTES, UI } from '../constants'
-import { apiPost, apiPut, apiDelete } from '../utils/api'
+import { apiGet, apiPost, apiPut, apiDelete } from '../utils/api'
 import { useCurrentUser } from '../contexts/UserContext'
 import { useToast } from '../contexts/ToastContext'
 
@@ -186,6 +186,179 @@ function EditListModal({ list, onClose, onSaved }) {
   )
 }
 
+// ── Collaborators Section ─────────────────────────────────────────────────────
+const ROLES = [
+  { id: 2, name: 'Admin' },
+  { id: 3, name: 'Editor' },
+  { id: 4, name: 'Viewer' },
+]
+
+function CollaboratorsSection({ listId, isOwner, currentUserId }) {
+  const [version, setVersion]     = useState(0)
+  const { data: collaborators, loading } = useFetch(`${API_ROUTES.collaborators(listId)}?v=${version}`)
+  const { showToast } = useToast()
+
+  const [search, setSearch]       = useState('')
+  const [results, setResults]     = useState([])
+  const [searching, setSearching] = useState(false)
+  const [selectedUser, setSelectedUser] = useState(null)
+  const [roleId, setRoleId]       = useState(3)
+  const [adding, setAdding]       = useState(false)
+  const [removing, setRemoving]   = useState(null)
+  const [showInvite, setShowInvite] = useState(false)
+
+  useEffect(() => {
+    if (!search.trim()) { setResults([]); return }
+    setSearching(true)
+    const t = setTimeout(async () => {
+      try {
+        const users = await apiGet(API_ROUTES.usersSearch(search))
+        setResults(Array.isArray(users) ? users : [])
+      } catch {
+        setResults([])
+      } finally {
+        setSearching(false)
+      }
+    }, UI.debounceMs)
+    return () => clearTimeout(t)
+  }, [search])
+
+  const handleAdd = async () => {
+    if (!selectedUser) return
+    setAdding(true)
+    try {
+      await apiPost(API_ROUTES.collaborators(listId), { userId: selectedUser.id, collaboratorRoleId: roleId })
+      showToast(`${selectedUser.username} added as ${ROLES.find(r => r.id === roleId)?.name}`)
+      setSelectedUser(null)
+      setSearch('')
+      setResults([])
+      setShowInvite(false)
+      setVersion(v => v + 1)
+    } catch {
+      showToast('Failed to add collaborator', 'error')
+    } finally {
+      setAdding(false)
+    }
+  }
+
+  const handleRemove = async (userId, username) => {
+    setRemoving(userId)
+    try {
+      await apiDelete(API_ROUTES.collaboratorById(listId, userId))
+      showToast(`${username} removed`)
+      setVersion(v => v + 1)
+    } catch {
+      showToast('Failed to remove collaborator', 'error')
+    } finally {
+      setRemoving(null)
+    }
+  }
+
+  const list = collaborators ?? []
+  const existingIds = new Set(list.map(c => c.userId))
+
+  return (
+    <div className="max-w-2xl">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="section-label">Collaborators</h2>
+        {isOwner && (
+          <button
+            onClick={() => setShowInvite(v => !v)}
+            className="btn btn-secondary btn-sm"
+          >
+            {showInvite ? 'Cancel' : '+ Invite'}
+          </button>
+        )}
+      </div>
+
+      {isOwner && showInvite && (
+        <div className="bg-lb-card border border-lb-border rounded-lg p-4 mb-4 space-y-3">
+          <div className="relative">
+            <input
+              className="input w-full"
+              placeholder="Search users by username…"
+              value={selectedUser ? selectedUser.username : search}
+              onChange={e => { setSearch(e.target.value); setSelectedUser(null) }}
+              autoFocus
+            />
+            {!selectedUser && search.trim() && (
+              <div className="absolute top-full left-0 right-0 z-10 mt-1 bg-lb-surface border border-lb-border rounded-lg overflow-hidden shadow-xl">
+                {searching && <div className="px-3 py-2 text-xs text-lb-muted">Searching…</div>}
+                {!searching && results.filter(u => !existingIds.has(u.id) && u.id !== currentUserId).map(u => (
+                  <button
+                    key={u.id}
+                    className="w-full text-left px-3 py-2 text-sm text-white hover:bg-lb-border/40 transition-colors"
+                    onClick={() => { setSelectedUser(u); setSearch(''); setResults([]) }}
+                  >
+                    {u.username}
+                  </button>
+                ))}
+                {!searching && results.filter(u => !existingIds.has(u.id) && u.id !== currentUserId).length === 0 && (
+                  <div className="px-3 py-2 text-xs text-lb-muted">No users found</div>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <select
+              className="input flex-1"
+              value={roleId}
+              onChange={e => setRoleId(Number(e.target.value))}
+            >
+              {ROLES.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+            </select>
+            <button
+              onClick={handleAdd}
+              disabled={!selectedUser || adding}
+              className="btn btn-primary btn-md"
+            >
+              {adding ? '…' : 'Add'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="space-y-2 animate-pulse">
+          {[1, 2].map(i => <div key={i} className="h-10 bg-lb-card rounded" />)}
+        </div>
+      ) : list.length === 0 ? (
+        <p className="text-lb-muted text-sm">No collaborators yet.</p>
+      ) : (
+        <div className="space-y-2">
+          {list.map(c => (
+            <div key={c.userId} className="flex items-center justify-between gap-3 py-2 px-3 rounded bg-lb-card border border-lb-border/40">
+              <div className="flex items-center gap-3">
+                <div className="w-7 h-7 rounded-full bg-lb-surface flex items-center justify-center text-xs font-bold text-lb-accent shrink-0">
+                  {c.username?.[0]?.toUpperCase() ?? '?'}
+                </div>
+                <div>
+                  <span className="text-sm text-white">{c.username}</span>
+                  <span className="ml-2 text-xs px-1.5 py-0.5 rounded border border-lb-border text-lb-muted">{c.role}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-lb-muted hidden sm:block">
+                  Added {new Date(c.addedAt).toLocaleDateString()}
+                </span>
+                {isOwner && (
+                  <button
+                    onClick={() => handleRemove(c.userId, c.username)}
+                    disabled={removing === c.userId}
+                    className="text-xs text-red-400 hover:text-red-300 transition-colors"
+                  >
+                    {removing === c.userId ? '…' : 'Remove'}
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 export default function ListDetail() {
   const { id }          = useParams()
@@ -356,6 +529,11 @@ export default function ListDetail() {
           }
         </div>
       )}
+
+      <div className="divider" />
+
+      {/* Collaborators */}
+      <CollaboratorsSection listId={id} isOwner={isOwner} currentUserId={currentUser?.id} />
 
       <div className="divider" />
 

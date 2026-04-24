@@ -68,11 +68,20 @@ function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 bg-lb-bg border-b border-lb-border">
-        <div className="max-w-6xl mx-auto px-4 h-12 flex items-center gap-6">
+      <header className="sticky top-0 z-40 border-b border-lb-border/60"
+        style={{ background: 'rgba(20,24,28,0.85)', backdropFilter: 'blur(12px)' }}
+      >
+        <div className="max-w-6xl mx-auto px-4 h-14 flex items-center gap-6">
 
-          <Link to="/" className="text-lb-green font-black text-base tracking-tight hover:text-lb-green">
-            ois gschaut
+          <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity" style={{ lineHeight: 1 }}>
+            <img
+              src="/logo.png"
+              alt="Ois Gschaut"
+              className="h-8 w-auto"
+              style={{ mixBlendMode: 'screen' }}
+            />
+            <span className="display text-2xl text-lb-green tracking-wider">OIS</span>
+            <span className="display text-2xl text-white tracking-wider">GSCHAUT</span>
           </Link>
 
           <nav className="flex items-center gap-5">

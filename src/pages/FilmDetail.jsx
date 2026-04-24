@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useFetch } from '../hooks'
 import { API_ROUTES } from '../constants'
-import { apiPost, apiDelete } from '../utils/api'
+import { apiGet, apiPost, apiDelete } from '../utils/api'
 import { useCurrentUser } from '../contexts/UserContext'
 import { useToast } from '../contexts/ToastContext'
 
@@ -102,7 +102,7 @@ function AddToListModal({ mediaId, onClose, onAdded }) {
 }
 
 // ── Episodes section ──────────────────────────────────────────────────────────
-function EpisodesSection({ mediaId, watchedSeasons, onToggleWatched }) {
+function EpisodesSection({ mediaId, watchedSeasons, onToggleWatched, watchedEpisodeIds, onToggleEpisodeWatched }) {
   const [activeSeason, setActiveSeason] = useState(1)
   const [syncing, setSyncing]           = useState(false)
   const [syncError, setSyncError]       = useState(null)
@@ -125,16 +125,11 @@ function EpisodesSection({ mediaId, watchedSeasons, onToggleWatched }) {
     setSyncing(true)
     setSyncError(null)
     try {
-      const resp = await fetch(API_ROUTES.syncEpisodes(mediaId), { method: 'POST' })
-      if (!resp.ok) {
-        const text = await resp.text()
-        setSyncError(text || 'Sync failed — TVMaze may not have this show.')
-      } else {
-        const updated = await fetch(API_ROUTES.episodes(mediaId)).then(r => r.json())
-        setEpisodes(Array.isArray(updated) ? updated : [])
-      }
-    } catch {
-      setSyncError('Network error during sync.')
+      await apiPost(API_ROUTES.syncEpisodes(mediaId), null)
+      const updated = await apiGet(API_ROUTES.episodes(mediaId))
+      setEpisodes(Array.isArray(updated) ? updated : [])
+    } catch (err) {
+      setSyncError(err?.message || 'Sync failed — TVMaze may not have this show.')
     } finally {
       setSyncing(false)
     }
@@ -205,17 +200,28 @@ function EpisodesSection({ mediaId, watchedSeasons, onToggleWatched }) {
       </div>
 
       <div className="space-y-1">
-        {visible.map(ep => (
-          <div key={ep.id} className="flex items-baseline gap-3 py-2 border-b border-lb-border/40">
-            <span className="text-lb-muted text-xs w-12 shrink-0">E{ep.numberInSeason}</span>
-            <span className="text-sm text-lb-text">{ep.title}</span>
-            {ep.airDate && (
-              <span className="text-lb-muted text-xs ml-auto shrink-0">
-                {new Date(ep.airDate).toLocaleDateString()}
-              </span>
-            )}
-          </div>
-        ))}
+        {visible.map(ep => {
+          const isWatched = watchedEpisodeIds?.has(ep.id)
+          return (
+            <div key={ep.id} className="flex items-center gap-3 py-2 border-b border-lb-border/40">
+              {onToggleEpisodeWatched && (
+                <input
+                  type="checkbox"
+                  checked={!!isWatched}
+                  onChange={() => onToggleEpisodeWatched(ep.id)}
+                  className="accent-lb-accent shrink-0 cursor-pointer"
+                />
+              )}
+              <span className="text-lb-muted text-xs w-12 shrink-0">E{ep.numberInSeason}</span>
+              <span className={`text-sm flex-1 ${isWatched ? 'text-lb-muted line-through' : 'text-lb-text'}`}>{ep.title}</span>
+              {ep.airDate && (
+                <span className="text-lb-muted text-xs shrink-0">
+                  {new Date(ep.airDate).toLocaleDateString()}
+                </span>
+              )}
+            </div>
+          )
+        })}
       </div>
     </div>
   )
@@ -228,6 +234,7 @@ export default function FilmDetail() {
   const { showToast }   = useToast()
   const [showAddToList, setShowAddToList]   = useState(false)
   const [watchedSeasons, setWatchedSeasons] = useState(null)
+  const [watchedEpisodeIds, setWatchedEpisodeIds] = useState(new Set())
   const [savedToWatchlist, setSavedToWatchlist] = useState(false)
   const [watchlistLoading, setWatchlistLoading] = useState(false)
 
@@ -240,6 +247,9 @@ export default function FilmDetail() {
       .then(r => r.json())
       .then(entries => setWatchedSeasons((entries ?? []).map(e => e.season)))
       .catch(() => setWatchedSeasons([]))
+    apiGet(`${API_ROUTES.watchedEpisodes}?userId=${currentUser.id}&mediaId=${id}`)
+      .then(ids => setWatchedEpisodeIds(new Set(ids ?? [])))
+      .catch(() => setWatchedEpisodeIds(new Set()))
   }, [currentUser, id])
 
   // Load watchlist status
@@ -264,6 +274,18 @@ export default function FilmDetail() {
       await apiPost(API_ROUTES.watched, { mediaId: Number(id), season })
       setWatchedSeasons(prev => [...(prev ?? []), season])
       showToast('Marked as watched')
+    }
+  }
+
+  const handleToggleEpisodeWatched = async (episodeId) => {
+    if (!currentUser) return
+    const isWatched = watchedEpisodeIds.has(episodeId)
+    if (isWatched) {
+      await apiDelete(`${API_ROUTES.watchedEpisodes}?episodeId=${episodeId}`)
+      setWatchedEpisodeIds(prev => { const next = new Set(prev); next.delete(episodeId); return next })
+    } else {
+      await apiPost(API_ROUTES.watchedEpisodes, { episodeId })
+      setWatchedEpisodeIds(prev => new Set([...prev, episodeId]))
     }
   }
 
@@ -401,6 +423,8 @@ export default function FilmDetail() {
             mediaId={id}
             watchedSeasons={watchedSeasons}
             onToggleWatched={currentUser ? handleToggleWatched : null}
+            watchedEpisodeIds={watchedEpisodeIds}
+            onToggleEpisodeWatched={currentUser ? handleToggleEpisodeWatched : null}
           />
         )}
       </div>

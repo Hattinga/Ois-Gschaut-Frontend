@@ -28,7 +28,7 @@ export function ToastProvider({ children }) {
           >
             {t.type === 'success' && <span className="text-lb-green mr-2">✓</span>}
             {t.type === 'error'   && <span className="text-red-400 mr-2">✕</span>}
-            {message}
+            {t.message}
           </div>
         ))}
       </div>
