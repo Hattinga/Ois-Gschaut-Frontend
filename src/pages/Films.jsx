@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import MediaCard from '../components/MediaCard'
 import { API_ROUTES, UI } from '../constants'
 import { apiPost } from '../utils/api'
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
 
 // ── TMDB search result row ────────────────────────────────────────────────────
 function TmdbResultRow({ result, isImported, isImporting, onImport }) {
@@ -217,6 +218,11 @@ function TmdbShelfRow({ title, items, loading, imported, importing, onImport }) 
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function Films() {
+  const searchRef = useRef(null)
+  useKeyboardShortcuts([
+    { key: '/', action: () => { searchRef.current?.focus(); searchRef.current?.select() } },
+  ])
+
   const [query, setQuery]           = useState('')
   const [tmdbResults, setTmdbResults] = useState([])
   const [searching, setSearching]   = useState(false)
@@ -276,11 +282,32 @@ export default function Films() {
     }
   }
 
+  // ── Filter / sort state (Feature 4) ──────────────────────────────────────
+  const [localSearch, setLocalSearch]   = useState('')
+  const [selectedGenre, setSelectedGenre] = useState('')
+  const [selectedType, setSelectedType] = useState('') // '' | 'Movie' | 'TV Show'
+  const [sortBy, setSortBy]             = useState('added') // added | title | year | rating
+
   // Derive shelf rows from library
   const movies   = library.filter(f => f.mediaType === 'Movie')
   const shows    = library.filter(f => f.mediaType === 'TV Show')
   const genres   = [...new Set(library.map(f => f.genre).filter(Boolean))].sort()
-  const isSearching = query.trim().length > 0
+  const isSearching  = query.trim().length > 0
+  const isFiltering  = !!(localSearch.trim() || selectedGenre || selectedType)
+
+  const filteredLibrary = (() => {
+    let items = library
+    if (localSearch.trim()) {
+      const q = localSearch.trim().toLowerCase()
+      items = items.filter(f => f.title.toLowerCase().includes(q) || (f.originalTitle ?? '').toLowerCase().includes(q))
+    }
+    if (selectedGenre) items = items.filter(f => f.genre === selectedGenre)
+    if (selectedType)  items = items.filter(f => f.mediaType === selectedType)
+    if (sortBy === 'title')  items = [...items].sort((a, b) => a.title.localeCompare(b.title))
+    if (sortBy === 'year')   items = [...items].sort((a, b) => new Date(b.releaseDate ?? 0) - new Date(a.releaseDate ?? 0))
+    if (sortBy === 'rating') items = [...items].sort((a, b) => (b.ratings?.[0]?.score ?? 0) - (a.ratings?.[0]?.score ?? 0))
+    return items
+  })()
 
   return (
     <div className="py-8">
@@ -297,7 +324,8 @@ export default function Films() {
           <div className="sm:ml-auto sm:w-72">
             <input
               className="input w-full"
-              placeholder="Search TMDB to add films…"
+              ref={searchRef}
+              placeholder="Search TMDB to add films… (/ to focus)"
               value={query}
               onChange={e => setQuery(e.target.value)}
             />
@@ -344,6 +372,95 @@ export default function Films() {
       ) : (
         /* ── Shelf mode ─────────────────────────────────────────────── */
         <div className="page-container">
+
+          {/* ── Filter toolbar (Feature 4) ─────────────────────────── */}
+          {!libraryLoading && library.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 mb-8 p-3 rounded-xl border border-lb-border/30 bg-lb-surface/40">
+              <input
+                className="input flex-1 min-w-[160px]"
+                placeholder="Bibliothek durchsuchen…"
+                value={localSearch}
+                onChange={e => setLocalSearch(e.target.value)}
+              />
+
+              <select
+                className="input"
+                value={selectedGenre}
+                onChange={e => setSelectedGenre(e.target.value)}
+              >
+                <option value="">Alle Genres</option>
+                {genres.map(g => <option key={g} value={g}>{g}</option>)}
+              </select>
+
+              <div className="flex rounded overflow-hidden border border-lb-border">
+                {[['', 'Alle'], ['Movie', 'Filme'], ['TV Show', 'Serien']].map(([val, label]) => (
+                  <button
+                    key={val}
+                    onClick={() => setSelectedType(val)}
+                    className={`px-3 py-1.5 text-xs font-bold transition-colors ${
+                      selectedType === val
+                        ? 'bg-lb-accent text-lb-bg'
+                        : 'text-lb-muted hover:text-white bg-lb-card'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              <select
+                className="input"
+                value={sortBy}
+                onChange={e => setSortBy(e.target.value)}
+              >
+                <option value="added">Kürzlich hinzugefügt</option>
+                <option value="title">Titel (A–Z)</option>
+                <option value="year">Jahr (neueste)</option>
+                <option value="rating">Bewertung</option>
+              </select>
+
+              {isFiltering && (
+                <button
+                  onClick={() => { setLocalSearch(''); setSelectedGenre(''); setSelectedType('') }}
+                  className="text-xs text-lb-muted hover:text-white transition-colors"
+                >
+                  ✕ Filter löschen
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* ── Filtered flat grid ─────────────────────────────────── */}
+          {isFiltering ? (
+            <>
+              <p className="section-label mb-4">
+                {filteredLibrary.length} Treffer
+              </p>
+              {filteredLibrary.length > 0 ? (
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-2 md:gap-3 mb-10">
+                  {filteredLibrary.map(film => (
+                    <div key={film.id} className="shelf-item" style={{ width: 'auto' }}>
+                      <div className="media-card">
+                        <a href={`/films/${film.id}`}>
+                          {film.assets?.find(a => a.assetType === 'Poster')?.url
+                            ? <img src={film.assets.find(a => a.assetType === 'Poster').url} alt={film.title} className="w-full h-full object-cover" loading="lazy" />
+                            : <div className="w-full h-full bg-lb-surface flex items-center justify-center p-2"><span className="text-lb-muted/40 text-xs text-center">{film.title}</span></div>
+                          }
+                          <div className="media-card-overlay">
+                            <p className="text-white text-xs font-semibold leading-tight line-clamp-2">{film.title}</p>
+                            {film.releaseDate && <p className="text-lb-muted text-[10px]">{new Date(film.releaseDate).getFullYear()}</p>}
+                          </div>
+                        </a>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-lb-muted text-sm py-10 text-center">Keine Treffer. Filter löschen?</p>
+              )}
+            </>
+          ) : (
+            <>
           <TmdbShelfRow
             title="Trending this week"
             items={trending}
@@ -386,6 +503,8 @@ export default function Films() {
               <p className="display text-4xl text-lb-muted mb-2">Empty</p>
               <p className="text-lb-muted text-sm">Search for a film above to add it to your library.</p>
             </div>
+          )}
+            </>
           )}
         </div>
       )}

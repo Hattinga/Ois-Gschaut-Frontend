@@ -11,6 +11,7 @@ import Profile from './pages/Profile'
 import Users from './pages/Users'
 import AccountSettings from './pages/AccountSettings'
 import AuthCallback from './pages/AuthCallback'
+import Watchlist from './pages/Watchlist'
 import NotFound from './pages/NotFound'
 
 function App() {
@@ -27,6 +28,7 @@ function App() {
               <Route path="/lists/:id" element={<ListDetail />} />
               <Route path="/users"     element={<Users />} />
               <Route path="/users/:id" element={<Profile />} />
+              <Route path="/watchlist"     element={<Watchlist />} />
               <Route path="/settings"      element={<AccountSettings />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="*"              element={<NotFound />} />

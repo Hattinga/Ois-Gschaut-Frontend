@@ -1,7 +1,8 @@
-import { useState } from 'react'
-import { Link, NavLink } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Link, NavLink, useLocation } from 'react-router-dom'
 import { useCurrentUser } from '../contexts/UserContext'
 import { API_ROUTES } from '../constants'
+import { apiPost } from '../utils/api'
 
 function GoogleIcon() {
   return (
@@ -22,7 +23,29 @@ function GitHubIcon() {
   )
 }
 
+// ── Feature 2: Guest Login + OAuth modal ──────────────────────────────────────
 function LoginModal({ onClose }) {
+  const { login } = useCurrentUser()
+  const [guestName, setGuestName]       = useState('')
+  const [guestLoading, setGuestLoading] = useState(false)
+  const [guestError, setGuestError]     = useState('')
+
+  const handleGuest = async (e) => {
+    e.preventDefault()
+    if (!guestName.trim()) return
+    setGuestLoading(true)
+    setGuestError('')
+    try {
+      const data = await apiPost(API_ROUTES.authGuest, { username: guestName.trim() })
+      login(data.user, data.token)
+      onClose()
+    } catch {
+      setGuestError('Name bereits vergeben oder ungültig.')
+    } finally {
+      setGuestLoading(false)
+    }
+  }
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
@@ -30,8 +53,8 @@ function LoginModal({ onClose }) {
     >
       <div className="bg-lb-surface border border-lb-border rounded-xl p-8 w-full max-w-sm mx-4 text-center">
         <div className="mb-6">
-          <h2 className="text-white font-black text-xl mb-1">Sign in</h2>
-          <p className="text-lb-muted text-sm">Track films, build lists, share with friends.</p>
+          <h2 className="text-white font-black text-xl mb-1">Einloggen</h2>
+          <p className="text-lb-muted text-sm">Filme tracken, Listen bauen, teilen.</p>
         </div>
 
         <div className="space-y-3">
@@ -51,29 +74,173 @@ function LoginModal({ onClose }) {
           </a>
         </div>
 
+        {/* Divider */}
+        <div className="flex items-center gap-3 my-5">
+          <div className="flex-1 h-px bg-lb-border/40" />
+          <span className="text-[11px] text-lb-muted/50 tracking-widest uppercase">oder</span>
+          <div className="flex-1 h-px bg-lb-border/40" />
+        </div>
+
+        {/* Guest login */}
+        <form onSubmit={handleGuest} className="space-y-2">
+          <input
+            className="input w-full text-center"
+            placeholder="Gastname wählen…"
+            value={guestName}
+            onChange={e => setGuestName(e.target.value)}
+            maxLength={30}
+            autoComplete="off"
+          />
+          {guestError && <p className="text-red-400 text-xs">{guestError}</p>}
+          <button
+            type="submit"
+            disabled={!guestName.trim() || guestLoading}
+            className="btn btn-ghost btn-md w-full border border-lb-border/40 hover:border-lb-accent/40"
+          >
+            {guestLoading ? '…' : 'Als Gast einloggen'}
+          </button>
+        </form>
+
         <button
           onClick={onClose}
-          className="mt-6 text-xs text-lb-muted hover:text-lb-text transition-colors"
+          className="mt-5 text-xs text-lb-muted hover:text-lb-text transition-colors"
         >
-          Browse without account
+          Ohne Konto stöbern
         </button>
       </div>
     </div>
   )
 }
 
-function Header() {
-  const { currentUser, logout } = useCurrentUser()
-  const [showLogin, setShowLogin] = useState(false)
+// ── Feature 3: Mobile slide-out drawer ────────────────────────────────────────
+function MobileDrawer({ open, onClose, currentUser, logout, onShowLogin }) {
+  const location = useLocation()
+
+  // Close drawer on route change
+  useEffect(() => {
+    onClose()
+  }, [location.pathname]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Close on Escape
+  useEffect(() => {
+    if (!open) return
+    const handler = (e) => { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
+  }, [open, onClose])
 
   return (
     <>
-      <header className="sticky top-0 z-40 border-b border-lb-border/60"
+      {/* Overlay */}
+      {open && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50"
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Drawer panel */}
+      <div
+        className="fixed top-0 right-0 bottom-0 z-50 w-64 flex flex-col"
+        style={{
+          background: '#14181c',
+          borderLeft: '1px solid rgba(255,255,255,0.08)',
+          transform: open ? 'translateX(0)' : 'translateX(100%)',
+          transition: 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+        }}
+      >
+        {/* Drawer header */}
+        <div className="flex items-center justify-between px-5 h-14 border-b border-lb-border/30">
+          <span className="display text-lg text-lb-green tracking-wider">OIS</span>
+          <button
+            onClick={onClose}
+            className="text-lb-muted hover:text-white transition-colors p-1"
+            aria-label="Menü schließen"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Nav links */}
+        <nav className="flex flex-col gap-1 px-3 pt-4">
+          {[
+            { to: '/films', label: 'Filme' },
+            { to: '/lists', label: 'Listen' },
+            { to: '/users', label: 'Mitglieder' },
+            ...(currentUser ? [{ to: '/watchlist', label: 'Watchlist' }] : []),
+          ].map(({ to, label }) => (
+            <NavLink
+              key={to}
+              to={to}
+              className={({ isActive }) =>
+                `px-3 py-2.5 rounded text-sm font-semibold transition-colors ${isActive ? 'text-white bg-lb-card' : 'text-lb-muted hover:text-white hover:bg-lb-card/50'}`
+              }
+            >
+              {label}
+            </NavLink>
+          ))}
+        </nav>
+
+        {/* Auth section at bottom */}
+        <div className="mt-auto px-5 py-6 border-t border-lb-border/30">
+          {currentUser ? (
+            <div className="space-y-3">
+              <Link
+                to={`/users/${currentUser.id}`}
+                className="block text-sm font-semibold text-white hover:text-lb-accent transition-colors"
+              >
+                {currentUser.username}
+              </Link>
+              <Link to="/settings" className="block text-xs text-lb-muted hover:text-white transition-colors">
+                Einstellungen
+              </Link>
+              <button onClick={logout} className="block text-xs text-lb-muted hover:text-white transition-colors">
+                Abmelden
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <button
+                onClick={() => { onClose(); onShowLogin() }}
+                className="btn btn-primary btn-md w-full"
+              >
+                Einloggen
+              </button>
+              <button
+                onClick={() => { onClose(); onShowLogin() }}
+                className="btn btn-ghost btn-md w-full text-lb-muted"
+              >
+                Stöbern
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  )
+}
+
+function Header() {
+  const { currentUser, logout } = useCurrentUser()
+  const [showLogin, setShowLogin]       = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
+  return (
+    <>
+      <header
+        className="sticky top-0 z-40 border-b border-lb-border/60"
         style={{ background: 'rgba(20,24,28,0.85)', backdropFilter: 'blur(12px)' }}
       >
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center gap-6">
 
-          <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity" style={{ lineHeight: 1 }}>
+          <Link
+            to="/"
+            className="flex items-center gap-2 hover:opacity-80 transition-opacity shrink-0"
+            style={{ lineHeight: 1 }}
+          >
             <img
               src="/logo.png"
               alt="Ois Gschaut"
@@ -84,55 +251,76 @@ function Header() {
             <span className="display text-2xl text-white tracking-wider">GSCHAUT</span>
           </Link>
 
-          <nav className="flex items-center gap-5">
-            <NavLink
-              to="/films"
-              className={({ isActive }) => `nav-link ${isActive ? 'text-white' : ''}`}
-            >
-              Films
+          {/* Desktop nav */}
+          <nav className="hidden md:flex items-center gap-5">
+            <NavLink to="/films" className={({ isActive }) => `nav-link ${isActive ? 'text-white' : ''}`}>
+              Filme
             </NavLink>
-            <NavLink
-              to="/lists"
-              className={({ isActive }) => `nav-link ${isActive ? 'text-white' : ''}`}
-            >
-              Lists
+            <NavLink to="/lists" className={({ isActive }) => `nav-link ${isActive ? 'text-white' : ''}`}>
+              Listen
             </NavLink>
-            <NavLink
-              to="/users"
-              className={({ isActive }) => `nav-link ${isActive ? 'text-white' : ''}`}
-            >
-              Members
+            <NavLink to="/users" className={({ isActive }) => `nav-link ${isActive ? 'text-white' : ''}`}>
+              Mitglieder
             </NavLink>
+            {currentUser && (
+              <NavLink to="/watchlist" className={({ isActive }) => `nav-link ${isActive ? 'text-white' : ''}`}>
+                Watchlist
+              </NavLink>
+            )}
           </nav>
 
           <div className="flex-1" />
 
-          <div className="flex items-center gap-4">
+          {/* Desktop auth */}
+          <div className="hidden md:flex items-center gap-4">
             {currentUser ? (
               <>
-                <Link to={`/users/${currentUser.id}`} className="text-white font-semibold text-sm hover:text-lb-accent transition-colors">
+                <Link
+                  to={`/users/${currentUser.id}`}
+                  className="text-white font-semibold text-sm hover:text-lb-accent transition-colors"
+                >
                   {currentUser.username}
                 </Link>
                 <Link to="/settings" className="nav-link text-xs">
-                  Settings
+                  Einstellungen
                 </Link>
                 <button onClick={logout} className="nav-link text-xs">
-                  Sign out
+                  Abmelden
                 </button>
               </>
             ) : (
               <>
                 <button onClick={() => setShowLogin(true)} className="nav-link">
-                  Sign in
+                  Einloggen
                 </button>
                 <button onClick={() => setShowLogin(true)} className="btn btn-primary btn-sm">
-                  Get started
+                  Loslegen
                 </button>
               </>
             )}
           </div>
+
+          {/* Mobile hamburger */}
+          <button
+            className="md:hidden p-2 text-lb-muted hover:text-white transition-colors"
+            onClick={() => setMobileMenuOpen(true)}
+            aria-label="Menü öffnen"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+            </svg>
+          </button>
         </div>
       </header>
+
+      {/* Mobile drawer */}
+      <MobileDrawer
+        open={mobileMenuOpen}
+        onClose={() => setMobileMenuOpen(false)}
+        currentUser={currentUser}
+        logout={logout}
+        onShowLogin={() => setShowLogin(true)}
+      />
 
       {showLogin && <LoginModal onClose={() => setShowLogin(false)} />}
     </>

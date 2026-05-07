@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import ListCard from '../components/ListCard'
 import Pagination from '../components/Pagination'
-import { useFetch } from '../hooks'
+import { useFetch, useScrollReveal } from '../hooks'
 import { API_ROUTES, UI } from '../constants'
 import { apiPost } from '../utils/api'
 import { useCurrentUser } from '../contexts/UserContext'
@@ -39,15 +39,15 @@ function CreateListModal({ onClose, onCreated }) {
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
       onClick={e => e.target === e.currentTarget && onClose()}
     >
-      <div className="bg-lb-surface border border-lb-border rounded-lg p-6 w-full max-w-md mx-4">
-        <h2 className="text-white font-black text-xl mb-5">New list</h2>
+      <div className="bg-lb-surface border border-lb-border rounded-xl p-6 w-full max-w-md mx-4">
+        <h2 className="display text-3xl text-white mb-5">Neue Liste</h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="text-xs text-lb-muted uppercase tracking-wide mb-1 block">Name</label>
+            <label className="text-xs text-lb-muted uppercase tracking-widest mb-1.5 block">Name</label>
             <input
               className="input w-full"
-              placeholder="e.g. Best of 2024"
+              placeholder="z.B. Beste Filme 2024"
               value={name}
               onChange={e => setName(e.target.value)}
               maxLength={100}
@@ -56,11 +56,11 @@ function CreateListModal({ onClose, onCreated }) {
           </div>
 
           <div>
-            <label className="text-xs text-lb-muted uppercase tracking-wide mb-1 block">Description (optional)</label>
+            <label className="text-xs text-lb-muted uppercase tracking-widest mb-1.5 block">Beschreibung (optional)</label>
             <textarea
               className="input w-full resize-none"
               rows={3}
-              placeholder="What's this list about?"
+              placeholder="Worum geht's in dieser Liste?"
               value={desc}
               onChange={e => setDesc(e.target.value)}
               maxLength={1000}
@@ -74,15 +74,15 @@ function CreateListModal({ onClose, onCreated }) {
               onChange={e => setIsPublic(e.target.checked)}
               className="accent-lb-accent"
             />
-            <span className="text-sm text-lb-text">Make this list public</span>
+            <span className="text-sm text-lb-text">Liste öffentlich machen</span>
           </label>
 
           {error && <p className="text-red-400 text-xs">{error}</p>}
 
           <div className="flex gap-3 justify-end pt-1">
-            <button type="button" onClick={onClose} className="btn btn-secondary btn-md">Cancel</button>
+            <button type="button" onClick={onClose} className="btn btn-secondary btn-md">Abbrechen</button>
             <button type="submit" disabled={!name.trim() || loading} className="btn btn-primary btn-md">
-              {loading ? 'Creating…' : 'Create list'}
+              {loading ? 'Erstelle…' : 'Liste erstellen'}
             </button>
           </div>
         </form>
@@ -101,97 +101,141 @@ export default function Lists() {
 
   const { data, loading, error } = useFetch(API_ROUTES.lists)
 
-  // Seed local state once server data arrives
   useEffect(() => {
     if (data && localLists === null) setLocalLists(data)
   }, [data]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const lists = localLists ?? data ?? []
-
-  const filtered = lists.filter(l =>
-    l.name.toLowerCase().includes(search.toLowerCase())
-  )
-  const paged = filtered.slice((page - 1) * UI.itemsPerPage, page * UI.itemsPerPage)
+  const lists    = localLists ?? data ?? []
+  const filtered = lists.filter(l => l.name.toLowerCase().includes(search.toLowerCase()))
+  const paged    = filtered.slice((page - 1) * UI.itemsPerPage, page * UI.itemsPerPage)
 
   const handleCreated = (newList) => {
     setLocalLists(prev => [...(prev ?? data ?? []), newList])
-    showToast(`List "${newList.name}" created`)
+    showToast(`Liste "${newList.name}" erstellt`)
   }
 
+  const gridRef = useScrollReveal()
+
   return (
-    <div className="page-container py-8">
+    <div>
+      {/* ── Page header ─────────────────────────────────────────────── */}
+      <div
+        className="relative overflow-hidden"
+        style={{ background: 'linear-gradient(160deg, #1a2535 0%, #14181c 70%)' }}
+      >
+        {/* Dot grid */}
+        <div className="absolute inset-0 opacity-[0.04] pointer-events-none" style={{
+          backgroundImage: 'radial-gradient(circle, #40bcf4 1px, transparent 1px)',
+          backgroundSize: '32px 32px',
+        }} />
 
-      <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-8">
-        <div>
-          <h1 className="text-2xl font-black text-white">Lists</h1>
-          <p className="text-lb-muted text-sm mt-0.5">
-            {loading ? 'Loading…' : `${filtered.length} list${filtered.length !== 1 ? 's' : ''}`}
-          </p>
-        </div>
-
-        <div className="flex-1 sm:max-w-xs sm:ml-auto">
-          <input
-            className="input w-full"
-            placeholder="Search lists…"
-            value={search}
-            onChange={e => { setSearch(e.target.value); setPage(1) }}
+        {/* Ghost logo watermark */}
+        <div
+          className="absolute right-0 top-0 bottom-0 flex items-center pointer-events-none"
+          aria-hidden="true"
+        >
+          <img
+            src="/logo.png"
+            alt=""
+            style={{
+              height: '200px',
+              width: 'auto',
+              opacity: 0.04,
+              mixBlendMode: 'screen',
+              filter: 'saturate(0)',
+              transform: 'translateX(20%)',
+            }}
           />
         </div>
 
-        <button
-          onClick={() => currentUser ? setShowCreate(true) : null}
-          className={`btn btn-primary btn-md shrink-0 ${!currentUser ? 'opacity-50 cursor-not-allowed' : ''}`}
-          title={!currentUser ? 'Sign in to create a list' : undefined}
-        >
-          + New list
-        </button>
+        <div className="page-container relative py-12">
+          <div className="flex flex-col sm:flex-row sm:items-end gap-6">
+            <div>
+              <p className="section-label text-lb-accent tracking-[0.25em] mb-2">Kuratiert</p>
+              <h1 className="display text-6xl text-white leading-none">Listen</h1>
+              <p className="text-lb-muted text-sm mt-2">
+                {loading
+                  ? 'Lade…'
+                  : `${filtered.length} Liste${filtered.length !== 1 ? 'n' : ''}`}
+              </p>
+            </div>
+
+            <div className="sm:ml-auto flex items-center gap-3">
+              <input
+                className="input w-full sm:w-64"
+                placeholder="Listen suchen…"
+                value={search}
+                onChange={e => { setSearch(e.target.value); setPage(1) }}
+              />
+              <button
+                onClick={() => currentUser ? setShowCreate(true) : null}
+                className={`btn btn-primary btn-md shrink-0 ${!currentUser ? 'opacity-50 cursor-not-allowed' : ''}`}
+                title={!currentUser ? 'Einloggen um eine Liste zu erstellen' : undefined}
+              >
+                + Neu
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {!currentUser && (
-        <p className="text-lb-muted text-sm mb-6 bg-lb-card border border-lb-border rounded px-4 py-3">
-          <span className="text-white">Sign in</span> (top right) to create and manage lists.
-        </p>
-      )}
+      {/* ── Content ─────────────────────────────────────────────────── */}
+      <div className="page-container py-8">
+        {!currentUser && (
+          <p className="text-lb-muted text-sm mb-6 bg-lb-card border border-lb-border/40 rounded-lg px-4 py-3">
+            <span className="text-white">Einloggen</span> (oben rechts) um Listen zu erstellen und verwalten.
+          </p>
+        )}
 
-      {error && (
-        <p className="text-red-400 text-sm mb-6 bg-red-900/20 border border-red-800 rounded px-4 py-3">
-          Could not load lists — is the backend running?
-        </p>
-      )}
+        {error && (
+          <p className="text-red-400 text-sm mb-6 bg-red-900/20 border border-red-800 rounded-lg px-4 py-3">
+            Listen konnten nicht geladen werden — läuft das Backend?
+          </p>
+        )}
 
-      {loading && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="bg-lb-card rounded animate-pulse h-40" />
-          ))}
-        </div>
-      )}
-
-      {!loading && filtered.length > 0 && (
-        <>
+        {loading && (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {paged.map(list => (
-              <ListCard
-                key={list.id}
-                id={list.id}
-                name={list.name}
-                description={list.description}
-                itemCount={list.itemCount}
-                coverPosters={list.coverPosters ?? []}
-              />
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="bg-lb-card rounded-xl animate-pulse h-40 border border-lb-border/20" />
             ))}
           </div>
-          <Pagination total={filtered.length} page={page} onPageChange={setPage} />
-        </>
-      )}
+        )}
 
-      {!loading && !error && filtered.length === 0 && (
-        <div className="text-center py-24">
-          <p className="text-lb-muted text-sm">
-            {search ? `No lists matching "${search}"` : 'No lists yet. Create the first one!'}
-          </p>
-        </div>
-      )}
+        {!loading && filtered.length > 0 && (
+          <>
+            <div
+              ref={gridRef}
+              className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 scroll-reveal reveal-up"
+            >
+              {paged.map(list => (
+                <ListCard
+                  key={list.id}
+                  id={list.id}
+                  name={list.name}
+                  description={list.description}
+                  itemCount={list.itemCount}
+                  coverPosters={list.coverPosters ?? []}
+                />
+              ))}
+            </div>
+            <Pagination total={filtered.length} page={page} onPageChange={setPage} />
+          </>
+        )}
+
+        {!loading && !error && filtered.length === 0 && (
+          <div className="text-center py-24 border border-lb-border/20 rounded-2xl">
+            <div
+              className="display text-lb-muted/20 mb-3 select-none"
+              style={{ fontSize: 'clamp(4rem, 12vw, 8rem)', lineHeight: 1 }}
+            >
+              LEER
+            </div>
+            <p className="text-lb-muted text-sm">
+              {search ? `Keine Listen für "${search}"` : 'Noch keine Listen. Erstell die erste!'}
+            </p>
+          </div>
+        )}
+      </div>
 
       {showCreate && (
         <CreateListModal

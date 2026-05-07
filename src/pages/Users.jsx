@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import Pagination from '../components/Pagination'
+import { useScrollReveal } from '../hooks'
 import { API_ROUTES, UI } from '../constants'
 
 function UserCard({ id, username }) {
-  const hue    = [...username].reduce((acc, c) => acc + c.charCodeAt(0), 0) % 360
+  const hue     = [...username].reduce((acc, c) => acc + c.charCodeAt(0), 0) % 360
   const initials = username.slice(0, 2).toUpperCase()
 
   return (
@@ -14,7 +15,7 @@ function UserCard({ id, username }) {
                  bg-lb-card transition-all duration-300
                  hover:border-lb-accent/50 hover:-translate-y-0.5 hover:shadow-[0_8px_32px_rgba(64,188,244,0.12)]"
     >
-      {/* colour bar top accent */}
+      {/* Colour bar top accent */}
       <div
         className="h-1 w-full"
         style={{ background: `linear-gradient(90deg, hsl(${hue},55%,45%), hsl(${hue + 60},45%,35%))` }}
@@ -37,7 +38,7 @@ function UserCard({ id, username }) {
           <p className="text-white font-semibold text-sm truncate group-hover:text-lb-accent transition-colors">
             {username}
           </p>
-          <p className="text-lb-muted text-xs mt-0.5">Member</p>
+          <p className="text-lb-muted text-xs mt-0.5">Mitglied</p>
         </div>
 
         {/* Arrow */}
@@ -54,6 +55,8 @@ export default function Users() {
   const [results, setResults] = useState(null)
   const [loading, setLoading] = useState(false)
   const [page, setPage]       = useState(1)
+
+  const gridRef = useScrollReveal()
 
   useEffect(() => {
     setLoading(true)
@@ -75,22 +78,41 @@ export default function Users() {
       <div className="relative overflow-hidden" style={{
         background: 'linear-gradient(160deg, #1a2535 0%, #14181c 70%)',
       }}>
-        {/* subtle dot grid */}
+        {/* Dot grid */}
         <div className="absolute inset-0 opacity-[0.04] pointer-events-none" style={{
           backgroundImage: 'radial-gradient(circle, #40bcf4 1px, transparent 1px)',
           backgroundSize: '32px 32px',
         }} />
 
+        {/* Ghost logo watermark */}
+        <div
+          className="absolute right-0 top-0 bottom-0 flex items-center pointer-events-none"
+          aria-hidden="true"
+        >
+          <img
+            src="/logo.png"
+            alt=""
+            style={{
+              height: '200px',
+              width: 'auto',
+              opacity: 0.04,
+              mixBlendMode: 'screen',
+              filter: 'saturate(0)',
+              transform: 'translateX(20%)',
+            }}
+          />
+        </div>
+
         <div className="page-container relative py-12">
           <div className="flex flex-col sm:flex-row sm:items-end gap-6">
             <div>
               <p className="section-label text-lb-accent tracking-[0.25em] mb-2">Community</p>
-              <h1 className="display text-6xl text-white leading-none">Members</h1>
+              <h1 className="display text-6xl text-white leading-none">Mitglieder</h1>
               <p className="text-lb-muted text-sm mt-2">
                 {loading
-                  ? 'Loading…'
+                  ? 'Lade…'
                   : results != null
-                    ? `${results.length} member${results.length !== 1 ? 's' : ''}`
+                    ? `${results.length} Mitglied${results.length !== 1 ? 'er' : ''}`
                     : ''}
               </p>
             </div>
@@ -98,7 +120,7 @@ export default function Users() {
             <div className="sm:ml-auto sm:w-72">
               <input
                 className="input w-full"
-                placeholder="Search by username…"
+                placeholder="Nach Username suchen…"
                 value={query}
                 onChange={e => setQuery(e.target.value)}
               />
@@ -119,7 +141,10 @@ export default function Users() {
 
         {!loading && paged.length > 0 && (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div
+              ref={gridRef}
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 scroll-reveal reveal-up"
+            >
               {paged.map(u => (
                 <UserCard key={u.id} id={u.id} username={u.username} />
               ))}
@@ -130,11 +155,14 @@ export default function Users() {
 
         {!loading && results?.length === 0 && (
           <div className="text-center py-24 border border-lb-border/20 rounded-2xl">
-            <p className="display text-5xl text-lb-muted/40 mb-3">
-              {query ? 'No results' : 'Empty'}
-            </p>
+            <div
+              className="display text-lb-muted/20 mb-3 select-none"
+              style={{ fontSize: 'clamp(4rem, 12vw, 8rem)', lineHeight: 1 }}
+            >
+              {query ? 'NIX' : 'LEER'}
+            </div>
             <p className="text-lb-muted text-sm">
-              {query ? `No members matching "${query}"` : 'No members yet.'}
+              {query ? `Kein Mitglied mit "${query}"` : 'Noch keine Mitglieder.'}
             </p>
           </div>
         )}

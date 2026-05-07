@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
+import { useRef } from 'react'
 
 function PosterPlaceholder({ title }) {
-  // deterministic pastel-dark gradient per title
   const hue = [...(title ?? '')].reduce((acc, c) => acc + c.charCodeAt(0), 0) % 360
   return (
     <div
@@ -34,21 +34,49 @@ function RatingDot({ score }) {
 }
 
 function MediaCard({ id, title, year, posterUrl, score }) {
+  const wrapRef = useRef(null)
+
+  const onMouseMove = (e) => {
+    const el = wrapRef.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    const x = (e.clientX - rect.left)  / rect.width  - 0.5  // –0.5 … 0.5
+    const y = (e.clientY - rect.top)   / rect.height - 0.5
+    el.style.transform = `perspective(480px) rotateY(${x * 14}deg) rotateX(${-y * 14}deg) scale(1.05)`
+    el.style.boxShadow = `${-x * 22}px ${y * 14}px 36px rgba(0,0,0,0.6), 0 0 20px rgba(64,188,244,0.07)`
+    el.style.zIndex = '5'
+  }
+
+  const onMouseLeave = () => {
+    const el = wrapRef.current
+    if (!el) return
+    el.style.transform = ''
+    el.style.boxShadow = ''
+    el.style.zIndex = ''
+  }
+
   return (
-    <Link to={`/films/${id}`} className="media-card group hover:text-white">
-      {posterUrl ? (
-        <img src={posterUrl} alt={title} loading="lazy" />
-      ) : (
-        <PosterPlaceholder title={title} />
-      )}
+    <div
+      ref={wrapRef}
+      onMouseMove={onMouseMove}
+      onMouseLeave={onMouseLeave}
+      style={{ transition: 'transform 0.18s ease, box-shadow 0.18s ease', position: 'relative' }}
+    >
+      <Link to={`/films/${id}`} className="media-card group hover:text-white">
+        {posterUrl ? (
+          <img src={posterUrl} alt={title} loading="lazy" />
+        ) : (
+          <PosterPlaceholder title={title} />
+        )}
 
-      <div className="media-card-overlay">
-        <p className="text-white text-xs font-semibold leading-tight line-clamp-2">{title}</p>
-        {year && <p className="text-lb-muted text-[10px] mt-0.5">{year}</p>}
-      </div>
+        <div className="media-card-overlay">
+          <p className="text-white text-xs font-semibold leading-tight line-clamp-2">{title}</p>
+          {year && <p className="text-lb-muted text-[10px] mt-0.5">{year}</p>}
+        </div>
 
-      <RatingDot score={score} />
-    </Link>
+        <RatingDot score={score} />
+      </Link>
+    </div>
   )
 }
 

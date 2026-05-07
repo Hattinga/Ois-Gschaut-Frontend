@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+
+export { useScrollReveal } from './useScrollReveal'
 
 /**
  * Custom hook for fetching data from an API
@@ -12,13 +14,22 @@ export function useFetch(url) {
         loading: true,
         error: null,
     })
+    const [tick, setTick] = useState(0)
 
     useEffect(() => {
+        if (!url) {
+            setState({ data: null, loading: false, error: null })
+            return
+        }
         let isMounted = true
+        setState(s => ({ ...s, loading: true }))
 
         const fetchData = async () => {
             try {
-                const response = await fetch(url)
+                const token = localStorage.getItem('og_token')
+                const response = await fetch(url, {
+                    headers: token ? { Authorization: `Bearer ${token}` } : {},
+                })
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`)
                 }
@@ -42,9 +53,11 @@ export function useFetch(url) {
         return () => {
             isMounted = false
         }
-    }, [url])
+    }, [url, tick])
 
-    return state
+    const refetch = useCallback(() => setTick(t => t + 1), [])
+
+    return { ...state, refetch }
 }
 
 /**

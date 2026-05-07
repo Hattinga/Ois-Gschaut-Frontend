@@ -21,6 +21,7 @@ export const API_ROUTES = {
   mediaTrending:   `${API_URL}/api/media/trending`,
   mediaSearch:     q => `${API_URL}/api/media/search?q=${encodeURIComponent(q)}`,
   mediaById:       id => `${API_URL}/api/media/${id}`,
+  mediaSimilar:    id => `${API_URL}/api/media/${id}/similar`,
   episodes:        id => `${API_URL}/api/media/${id}/episodes`,
   syncEpisodes:    id => `${API_URL}/api/media/${id}/sync-episodes`,
   listItems:       id => `${API_URL}/api/lists/${id}/items`,
@@ -30,6 +31,7 @@ export const API_ROUTES = {
   watched:         `${API_URL}/api/watched`,
   watchedEpisodes: `${API_URL}/api/watched/episodes`,
   watchlist:       `${API_URL}/api/watchlist`,
+  watchlistFull:   `${API_URL}/api/watchlist/full`,
   watchlistToggle: `${API_URL}/api/watchlist/toggle`,
 }
 

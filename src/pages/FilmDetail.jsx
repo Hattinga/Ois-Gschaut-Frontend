@@ -5,6 +5,7 @@ import { API_ROUTES } from '../constants'
 import { apiGet, apiPost, apiDelete } from '../utils/api'
 import { useCurrentUser } from '../contexts/UserContext'
 import { useToast } from '../contexts/ToastContext'
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts'
 
 // ── Rating badge ──────────────────────────────────────────────────────────────
 function RatingBadge({ source, score }) {
@@ -239,6 +240,14 @@ export default function FilmDetail() {
   const [watchlistLoading, setWatchlistLoading] = useState(false)
 
   const { data: film, loading, error } = useFetch(API_ROUTES.mediaById(id))
+  const { data: similarRaw } = useFetch(id ? API_ROUTES.mediaSimilar(id) : null)
+  const similar = Array.isArray(similarRaw) ? similarRaw.slice(0, 12) : []
+
+  // Keyboard shortcuts (Feature 9)
+  useKeyboardShortcuts([
+    { key: 'l', action: () => currentUser && setShowAddToList(true) },
+    { key: 'w', action: () => currentUser && !watchlistLoading && handleToggleWatchlist() },
+  ])
 
   // Load watched status
   useEffect(() => {
@@ -428,6 +437,34 @@ export default function FilmDetail() {
           />
         )}
       </div>
+
+      {/* ── Ähnliche Filme (Feature 6) ─────────────────────────────── */}
+      {similar.length > 0 && (
+        <div className="page-container pb-12">
+          <div className="divider" />
+          <h2 className="shelf-label mb-4">Ähnliche Filme</h2>
+          <div className="relative group/shelf">
+            <div className="shelf-scroll">
+              {similar.map(r => (
+                <div key={r.tmdbId} className="shelf-item relative group/card">
+                  <div className="media-card">
+                    {r.posterUrl
+                      ? <img src={r.posterUrl} alt={r.title} loading="lazy" className="w-full h-full object-cover" />
+                      : <div className="w-full h-full bg-lb-surface flex items-center justify-center">
+                          <span className="text-lb-muted/30 text-xs text-center px-2">{r.title}</span>
+                        </div>
+                    }
+                    <div className="media-card-overlay opacity-0 group-hover/card:opacity-100">
+                      <p className="text-white text-xs font-semibold leading-tight line-clamp-2 mb-1">{r.title}</p>
+                      {r.releaseDate && <p className="text-lb-muted text-[10px]">{r.releaseDate.slice(0, 4)}</p>}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {showAddToList && (
         <AddToListModal
